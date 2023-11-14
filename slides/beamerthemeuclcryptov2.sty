@@ -1,0 +1,102 @@
+%
+% File <beamerouterthemeuclcryptov2.sty>
+%
+% This file provides the beamer theme for use by the UCL Crypto Group
+% for the current versions of the beamer (3.06) and pgf (1.01) classes.
+% Copyright 2006-06-23 by Olivier Pereira.
+%
+% The slides using this theme follow the guidelines introduced by Eric
+% Peeters.
+%
+% This program can be redistributed and/or modified under the terms
+% of the GNU Public License, version 2.
+
+                                % Colors
+
+\providecolor{cryptodblue}{rgb}{.2,.2,.4}
+\definecolor{cryptolblue}{rgb}{.49,.49,.67}
+\definecolor{cryptoorange}{rgb}{.93,.39,.03}
+\definecolor{cryptogrey}{rgb}{.753,.753,.753}
+\definecolor{cryptolgrey}{rgb}{.8,.8,.8}
+% added by Paolo
+\definecolor{cryptodarkgreen}{rgb}{120,1,.196}
+
+\setbeamercolor{structure}{fg=cryptodblue}
+\setbeamercolor{normal text}{fg=black}
+\setbeamercolor{alerted text}{fg=red}
+\setbeamercolor{example text}{fg=green!50!black}
+
+
+
+                                % Title page
+\usetitlepagetemplate{
+  \vbox{}
+  \vfill
+  \begin{centering}
+    \Large\structure{{\rmfamily \inserttitle}}\par
+    \normalsize\structure{\rmfamily \insertsubtitle}\par
+    \vskip1.5em
+    \normalsize\structure\insertauthor\vskip1em
+      %\vspace{0.5em}
+    {\scriptsize\structure\insertinstitute\par}\par\vskip.5em
+    %\inserttitlegraphic
+  \end{centering}
+  }
+
+                                % Navigation bar
+\beamertemplatenavigationsymbolsempty
+
+                                % Frametitles
+\useframetitletemplate{%
+  %\vskip.8em
+  {%\leftskip-\beamer@leftmargin plus1fill\advance\leftskip by0.3cm%
+   %\rightskip-\beamer@rightmargin plus1fill\advance\rightskip by0.3cm\leavevmode
+    \color{structure}\Large{\rmfamily \insertframetitle}\par}
+  \vspace{-0.2cm}
+  \color{cryptoorange}\rule{\textwidth}{.1mm}
+  }
+
+                                % Head
+\setbeamertemplate{headline}{%
+\leavevmode%
+  \hbox{%
+    \begin{beamercolorbox}[wd=\paperwidth,ht=2.5ex,dp=1.125ex]{palette quaternary}%
+    \insertsectionnavigationhorizontal{\paperwidth}{}{\hskip0pt plus1filll}
+    \end{beamercolorbox}%
+  }
+}
+                                % Footline
+% Le texte de la footline est d�fini dans le background pour ne pas �tre affect�
+% par les changements de marge.
+%\usefoottemplate{
+%\begin{pgfpicture}{0cm}{0cm}{12.8cm}{.9cm}
+%\end{pgfpicture}
+%}
+
+                                % Background
+\pgfdeclareimage[interpolate=true, width=.55cm]{.figs_template/cryptov2.png}{.figs_template/cryptov2.png}
+
+\defbeamertemplate*{footline}{infolines theme}
+{
+    \onslide<1->
+   \leavevmode%
+   \hbox{%
+   \begin{beamercolorbox}[wd=.333333\paperwidth,ht=2.25ex,dp=1ex,center]{author in head/foot}%
+     \usebeamerfont{author in head/foot}\insertshortauthor%~~(\insertshortinstitute)
+   \end{beamercolorbox}%
+   \begin{beamercolorbox}[wd=.333333\paperwidth,ht=2.25ex,dp=1ex,center]{title in head/foot}%
+     \usebeamerfont{title in head/foot}\insertshorttitle
+   \end{beamercolorbox}%
+   \begin{beamercolorbox}[wd=.333333\paperwidth,ht=2.25ex,dp=1ex,right]{date in head/foot}%
+     \usebeamerfont{date in head/foot}\hspace*{2em}
+     \insertframenumber{} / \inserttotalframenumber\hspace*{2ex}
+   \end{beamercolorbox}}%
+   \vskip0pt%
+}
+                                % Blocks
+\useblocktemplate{\medskip{\color{structure}\large\textrm{\textsc{\insertblockname}}}\par}{\medskip}
+\usealertblocktemplate{\medskip{\alert{\large\textrm{\textsc{\insertblockname}}}}\par}{\medskip}
+%\useexampleblocktemplate{\medskip\begingroup\color{darkgreen}{\large\textrm{\textsc{\insertblockname}}}\par}{\endgroup\medskip}
+% modified by Paolo
+\useexampleblocktemplate{\medskip\begingroup\color{cryptodarkgreen}{\large\textrm{\textsc{\insertblockname}}}\par}{\endgroup\medskip}
+

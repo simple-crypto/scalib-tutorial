@@ -1,0 +1,39 @@
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black
+}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{bm}
+
+\usepackage{listings}
+\usepackage{pythonhighlight}
+%\lstset{basicstyle=\ttfamily}
+
+\usepackage{algorithm,algorithmicx,algpseudocode}
+
+\usepackage{xspace}
+
+\usepackage[]{todonotes}
+
+\usepackage{beamerthemeuclcryptov2}
+
+\AtBeginSection[]
+{
+    \begin{frame}<beamer>
+        \frametitle{Content}
+        \tableofcontents[currentsection]
+    \end{frame}
+}
+
+\DeclareMathOperator*{\expectation}{\mathbb{E}}
+\DeclareMathOperator*{\variance}{\mathbb{V}}
+\DeclareMathOperator*{\argmax}{\arg\max}

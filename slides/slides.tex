@@ -1,0 +1,351 @@
+\documentclass[aspectratio=169]{beamer}
+
+\input{preamble}
+
+\title{Side-channel cryptanalysis of a masked AES with SCALib}
+
+\author[O. Bronchain, G. Cassiers]{
+    Olivier Bronchain
+    \and 
+    Gaëtan Cassiers
+}
+
+\begin{document}
+
+\begin{frame}{}
+    \maketitle
+    \begin{columns}
+        \begin{column}{0.1\textwidth}
+            \includegraphics[width=\textwidth]{logos/nxp.png}
+        \end{column}
+        \begin{column}{0.1\textwidth}
+            \includegraphics[width=\textwidth]{logos/tugraz.png}
+        \end{column}
+    \end{columns}
+    \vspace*{3ex}
+    \begin{center}
+        Download the dataset:~\url{https://tinyurl.com/ascad-5k} (1.3~GB) \\
+        Slides available at~\url{https://github.com/simple-crypto/scalib-tutorial}
+    \end{center}
+\end{frame}
+
+\begin{frame}{Table of Contents}
+    \tableofcontents
+\end{frame}
+
+\section{Introduction}
+
+\begin{frame}{Attack context}
+    \begin{center}
+        \emph{How secure is my implementation?}
+    \end{center}
+
+    Worst-case attack:
+    \begin{itemize}
+        \item Assume all implementation details are known.
+        \item Powerful profiling available (including knowledge of the masks).
+        \item Profile \& attack on the same device.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{SCALib: A Side-Channel Analysis Library}
+    \begin{itemize}
+        \item Flexible \& Simple: a Python library working on numpy arrays.
+        \item High performance: expensive computations are optimized with native code and multi-threaded.
+        \item Scalability thanks to streaming APIs.
+    \end{itemize}
+    \begin{center}
+        See docs at \url{https://scalib.readthedocs.io/}.
+    \end{center}
+\end{frame}
+
+\begin{frame}{ASCAD: ANSSI's Side-Channel Analysis Dataset}
+    ASCADv1 variable key:
+    \begin{itemize}
+        \item Released in 2018.
+        \item 300k traces, 250k points in full traces.
+        \item 8-bit smart card.
+        \item Often used in (deep learning) SCA research.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{A table-based masked AES implementation}
+    \begin{algorithmic}
+        \ttfamily
+        \State Input: masked key bytes $(k^{(0)}_0, k^{(0)}_1),\dots, (k^{(15)}_0, k^{(15)}_1)$.
+        \State Input: masked plaintext bytes $(p^{(0)}_0, p^{(0)}_1),\dots, (p^{(15)}_0, p^{(15)}_1)$.
+        \State Input: randomness bytes $r_{in}$, $r_{out}$, masked sbox table $MskSbox$.
+        \State // Add round key
+        \For{$i=0,\dots,15$}
+            \State $x^{(i)}_0 \gets k^{(i)}_0 \oplus p^{(i)}_0$
+            \State $x^{(i)}_1 \gets k^{(i)}_1 \oplus p^{(i)}_1$
+            \State $x^{(i)}_{rin} \gets (x^{(i)}_0 \oplus r_{in}) \oplus x^{(i)}_1$
+            \State $x^{(i)}_{rout} \gets MskSbox(x^{(i)}_{rin})$
+            \State $y^{(i)}_0 \xleftarrow{\$} \mathbb{F}_{256}$
+            \State $y^{(i)}_1 \gets (x^{(i)}_{rout} \oplus y^{(i)}_0) \oplus r_{out}$.
+        \EndFor
+        \State // ...
+    \end{algorithmic}
+\end{frame}
+
+\begin{frame}{A simple attack on ASCAD}
+    \begin{center}
+        \emph{Profile all intermediate variables in the computation, recombine these to get the key.}
+    \end{center}
+    \pause
+
+    \begin{enumerate}[<+->]
+        \item Selection of Points Of Interest (POIs) for each intermediate
+            \begin{itemize}[<.->]
+                \item To reduce leakage's dimensionality.
+                \item Select $k$ points with highest Signal-to-Noise Ratio (SNR).
+            \end{itemize}
+        \item Build templates with Linear Discriminant Analysis (LDA)
+            \begin{itemize}[<.->]
+                \item Gaussian Templates with pooled covariance matrix \& dimensionality reduction.
+                \item Outputs probability distribution (over $\mathbb{F}_{256}$) for each intermediate.
+            \end{itemize}
+        \item Recombine intermediates with Soft-Analytical Side-Channel Attack (SASCA)
+            \begin{itemize}[<.->]
+                \item Bayesian inference: find key distribution given intermediate's distributions.
+                \item (Approximate) solution: (loopy) belief propagation.
+            \end{itemize}
+        \item Evaluate the attack: find the key rank
+            \begin{itemize}[<.->]
+                \item Also known as Guessing Entropy (GE).
+            \end{itemize}
+    \end{enumerate}
+    \pause
+
+    \textit{Attack introduced in} \url{https://eprint.iacr.org/2021/817}
+\end{frame}
+
+\section{Getting Started}
+\begin{frame}{Setup}
+    \begin{itemize}
+        \item Download dataset and scripts:\\
+            \url{https://github.com/simple-crypto/scalib-tutorial}
+        \item Create a python virtual environment:
+            \begin{itemize}
+                    \item Linux, Mac Os:\\
+                        \lstinline[language=sh]$cd scalib_tutorial && python3 -m venv ve && source ve/bin/activate$
+                    \item Windows:\\
+                        \lstinline[language=sh]$cd scalib_tutorial && python3 -m venv ve && .\\ve\\Scripts\\activate$
+            \end{itemize}
+        \item Install depencencies: \lstinline[language=sh]$pip install -r requirements.txt$ \\
+            {\footnotesize (dependencies: \texttt{scalib tqdm matplotlib h5py jupyter})}
+        \item Start Notebooks:
+        \lstinline[language=sh]$python -m jupyter notebook$
+    \end{itemize}
+\end{frame}
+
+
+\begin{frame}{Step 0: Plot a trace}
+    Result:
+    \begin{center}
+        \includegraphics[width=\textwidth]{figures/res_step0.png}
+    \end{center}
+\end{frame}
+
+\section{Attack Implementation}
+\begin{frame}{Step 1: SNR + POI}
+    For every variable $v$ among $r_{in}, r_{out}, x^{(i)}_0, x^{(i)}_1, y^{(i)}_0, y^{(i)}_1$,
+    \begin{enumerate}
+        \item Compute the SNR for each point $k$ in the trace:
+            \[
+                \textsf{SNR}_{v,k} = \frac{
+                    \variance_{v}\left(\expectation_{l_k}(l_k)\right)
+                }{
+                    \expectation_{v}\left(\variance_{l_k}(l_k)\right)
+                }
+            \]
+        \item Select the $N_{\textsf{POIs}}=512$ points with higest SNR for each variable:
+            \[
+                \textsf{POIs}_{v} = \argmax_k \textsf{SNR}_{v,k}
+            \]
+    \end{enumerate}
+
+    Useful classes/functions:
+    \href{https://scalib.readthedocs.io/en/stable/source/api/scalib.metrics.SNR.html}{scalib.metrics.SNR},
+    \href{https://numpy.org/doc/stable/reference/generated/numpy.argsort.html}{numpy.argsort}
+\end{frame}
+\begin{frame}{Step 1: result}
+    \begin{center}
+        \includegraphics[width=\textwidth]{figures/res_step1.png}
+    \end{center}
+\end{frame}
+
+\begin{frame}[containsverbatim]{Step 1: Solution}
+
+Compute the SNR with:
+\begin{python}
+for v in tqdm(variables, desc="SNR Variables"):
+    snr = SNR(np=1, nc=256, ns=traces.shape[1])
+    x = labels[v].reshape((settings.profile, 1))
+    snr.fit_u(traces, x)
+    snrs[v] = snr.get_snr()[0, :]
+\end{python}
+Recover the POIs with:
+\begin{python}
+for v, snr in snrs.items():
+    poi = np.argsort(snr)[-settings.poi :].astype(np.uint32)
+\end{python}
+\end{frame}
+
+\begin{frame}{Step 2: LDA}
+    For every variable $v$:
+    \begin{enumerate}
+        \item compute a linear discriminant analysis model based on the POIs,
+        \item make a scatter plot of the 2D-projected features,
+        \item predict a probability distribution of the variable for a new trace.
+    \end{enumerate}
+
+    The LDA model is both
+    \begin{itemize}
+        \item a linear dimensionality reduction tool (that maximizes SNR in projected dimensions),
+        \item a Bayesian classification tool (a.k.a. pooled Gaussian templates).
+    \end{itemize}
+
+    Useful classes/functions:
+    \href{https://scalib.readthedocs.io/en/stable/source/api/scalib.modeling.LDAClassifier.html}{scalib.modeling.LDAClassifier}
+\end{frame}
+
+\begin{frame}{Step 2: result}
+    \begin{center}
+        \includegraphics[width=.6\textwidth]{figures/res_step2.png}
+    \end{center}
+\end{frame}
+
+
+\begin{frame}[containsverbatim]{Step 2: Solution}
+
+Compute the LDA with:
+\begin{python}
+for v in tqdm(variables, desc="LDA Variables"):
+    lda = scalib.modeling.LDAClassifier(nc=256, p=settings.dim, ns=settings.poi)
+    lda.fit_u(traces[:, pois[v]], labels[v])
+    lda.solve()
+\end{python}
+
+\end{frame}
+
+\begin{frame}{Step 3: SASCA}
+    \begin{columns}
+        \begin{column}{0.4\textwidth}
+            \begin{enumerate}
+                \item Implement factor graph
+                \item Add evidence from LDA
+                \item Run belief propagation
+                    \begin{itemize}
+                        \item Remark: no cycle!
+                    \end{itemize}
+            \end{enumerate}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \resizebox{\textwidth}{!}{
+                \begin{tikzpicture}
+                    \input{factor_graph.tex}
+                \end{tikzpicture}
+            }
+        \end{column}
+    \end{columns}
+
+    Useful classes/functions:
+    \href{https://scalib.readthedocs.io/en/stable/source/api/scalib.attacks.FactorGraph.html}{scalib.attacks.FactorGraph}.
+\end{frame}
+\begin{frame}{Step 3: result}
+    \begin{center}
+        \includegraphics[width=\textwidth]{figures/res_step3.png}
+    \end{center}
+\end{frame}
+\begin{frame}[containsverbatim]{Step 3: solution}
+For each of the bytes, run:
+\begin{python}
+# Init the sasca with the factor graph for a single trace
+graph = scalib.attacks.FactorGraph(sasca_graph, {"sbox": SBOX})
+# Set the labels for the plaintext byte
+bp = scalib.attacks.BPState(graph, 1, {"p": labels[f"p_{i}"].astype(np.uint32)})
+# Set the initial distri. for target var. 'vs' if it is in the graph
+for v in target_variables(i):
+    vs = v.split('_')[0]
+    if vs in graph.vars():
+        # Assign the distribution of vs
+        prs = ldas[v].predict_proba(traces[:, pois[v]])
+        bp.set_evidence(vs, prs)
+# Run 3 iterations of belief propagation
+bp.bp_loopy(it=3, initialize_states=True)
+distribution = bp.get_distribution(f"k")
+\end{python}
+\end{frame}
+
+\begin{frame}{Step 4: Key rank estimation}
+    Key rank (a.k.a. Guessing Entropy):
+    \[
+        r = \left\vert\left\{
+            k \in \mathcal{K} \;|\; \tilde{\Pr}[K=k] \ge \tilde{\Pr}[K=k*]
+            \right\}\right\vert
+    \]
+    where $k*$ is the correct key.
+
+    Easy to compute on single byte, harder for large keys.
+
+    \begin{enumerate}
+        \item Compute the rank for each of the key bytes.
+        \item Compute an estimation of the rank of the full key.
+    \end{enumerate}
+
+    Useful classes/functions:
+    \href{https://numpy.org/doc/stable/reference/generated/numpy.count_nonzero.html}{numpy.count\_nonzero},
+    \href{https://scalib.readthedocs.io/en/stable/source/api/scalib.postprocessing.rankestimation.html}{scalib.postprocessing.rankestimation}.
+\end{frame}
+\begin{frame}{Step 4: result}
+    \begin{center}
+        \includegraphics[width=\textwidth]{figures/res_step4.png}
+    \end{center}
+\end{frame}
+
+\begin{frame}[containsverbatim]{Step 4: solution}
+\begin{python}
+def eval_rank(secret_key, key_distribution):
+    """Returns the rank of the true key"""
+
+    # Floor the key_distribution to avoid numerical issues
+    key_distribution[np.where(key_distribution < 1e-100)] = 1e-100
+
+    # Compute the rank of the
+    log2distribution = np.log2(key_distribution)
+    rmin, r, rmax = scalib.postprocessing.rank_accuracy(
+        -log2distribution, secret_key, max_nb_bin=2**20
+    )
+
+    return r
+
+\end{python}
+\end{frame}
+
+\section{Conclusion}
+\begin{frame}{A versatile attack}
+    \begin{itemize}
+        \item High robustness for hyperparameters (see \url{https://eprint.iacr.org/2021/817}).
+        \item Similar to one of the winning attacks of the \href{https://ches.iacr.org/2023/challenge.php}{CHES~2023 challenge}.
+        \item Similar flow works against post-quantum crypto \url{https://eprint.iacr.org/2023/1545}.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Other SCALib features}
+    \begin{itemize}
+        \item Ttest: for TVLA, ensures that expected masking security order is reached.
+            \begin{itemize}
+                    \item higher-order
+                    \item multivariate
+            \end{itemize}
+        \item RLDA: a LDA that works with many classes (e.g. 16-bit or 32-bit states).
+        \item Perceived information/Training information: evaluate quality of models.
+    \end{itemize}
+
+    See \url{https://scalib.readthedocs.io/en/stable/}
+
+    Feature requests: \url{https://github.com/simple-crypto/SCALib/issues/new}
+\end{frame}
+
+\end{document}
