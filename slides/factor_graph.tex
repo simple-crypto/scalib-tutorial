@@ -7,18 +7,6 @@
 \node[color=blue,draw,circle,below right of=xor2](xrin) {$x_{rin}$};
 
 
-\node[rectangle,draw,right =.9cm of x] (sbox) {Sbox};
-\node[circle,draw,right =.9cm of sbox] (y) {$y$};
-\node[rectangle,draw,below of=y] (xor3) {$\oplus$};
-\node[circle,color=blue,draw,below left of=xor3] (rout) {$r_{out}$};
-\node[circle,color=blue,draw,below right of=xor3] (yrout) {$y_{rout}$};
-
-\node[draw,rectangle,above of=y](xor4) {$\oplus$};
-\node[color=blue,draw,circle,above left of=xor4](y0) {$y_0$};
-\node[color=blue,draw,circle,above right of=xor4](y1) {$y_1$};
-
-
-
 \node[rectangle,draw,left =1.1cm of x] (xorp) {$\oplus$};
 \node[color=green!70!black,circle,draw,left of=xorp](p){$p$};
 \node[color=red,circle,draw,below of=xorp](k){$k$};
@@ -27,11 +15,25 @@
 \draw[thick] (k) -- (xorp);
 
 \draw[thick] (x0) -- (xor1) -- (x1);
-\draw[thick] (xor1) -- (x) -- (sbox);
 \draw[thick] (rin) -- (xor2) -- (xrin);
 \draw[thick] (x) -- (xor2);
+\draw[thick] (xor1) -- (x);
 
-\draw[thick] (y0) -- (xor4) -- (y1);
-\draw[thick] (xor4) -- (y) -- (sbox);
-\draw[thick] (rout) -- (xor3) -- (yrout);
-\draw[thick] (y) -- (xor3);
+
+\begin{scope}[draw opacity=0.5,text opacity=0.5]
+    \node[rectangle,draw,right =.9cm of x] (sbox) {Sbox};
+    \node[circle,draw,right =.9cm of sbox] (y) {$y$};
+    \node[rectangle,draw,below of=y] (xor3) {$\oplus$};
+    \node[circle,color=blue,draw,below left of=xor3] (rout) {$r_{out}$};
+    \node[circle,color=blue,draw,below right of=xor3] (yrout) {$y_{rout}$};
+
+    \node[draw,rectangle,above of=y](xor4) {$\oplus$};
+    \node[color=blue,draw,circle,above left of=xor4](y0) {$y_0$};
+    \node[color=blue,draw,circle,above right of=xor4](y1) {$y_1$};
+
+    \draw[thick] (x) -- (sbox);
+    \draw[thick] (y0) -- (xor4) -- (y1);
+    \draw[thick] (xor4) -- (y) -- (sbox);
+    \draw[thick] (rout) -- (xor3) -- (yrout);
+    \draw[thick] (y) -- (xor3);
+\end{scope}

@@ -4,9 +4,7 @@
 
 \title{Side-channel cryptanalysis of a masked AES with SCALib}
 
-\author[O. Bronchain, G. Cassiers]{
-    Olivier Bronchain
-    \and 
+\author[G. Cassiers]{
     Gaëtan Cassiers
 }
 
@@ -15,19 +13,29 @@
 \begin{frame}{}
     \maketitle
     \begin{columns}
-        \begin{column}{0.1\textwidth}
-            \includegraphics[width=\textwidth]{logos/nxp.png}
+        \begin{column}{0.15\textwidth}
+            \includegraphics[width=\textwidth]{logos/uclouvain.png}
         \end{column}
-        \begin{column}{0.1\textwidth}
-            \includegraphics[width=\textwidth]{logos/tugraz.png}
+        \begin{column}{0.08\textwidth}
+            \includegraphics[width=\textwidth]{logos/crypto_group.jpg}
+            % TODO logo simple-crypto
         \end{column}
     \end{columns}
     \vspace*{3ex}
     \begin{center}
         Download the dataset:~\url{https://tinyurl.com/ascad-5k} (1.3~GB) \\
+        % TODO https://drive.google.com/file/d/12_vaKztMGigkKn3YmOKqLj4E1d6ItdaQ/view?usp=sharing
         Slides available at~\url{https://github.com/simple-crypto/scalib-tutorial}
     \end{center}
+    \vspace*{2ex}
 \end{frame}
+
+%\begin{frame}{Acknowledgements}
+%    \begin{itemize}
+%        \item Olivier Bronchain
+%        \item SCALib contributors
+%    \end{itemize}
+%\end{frame}
 
 \begin{frame}{Table of Contents}
     \tableofcontents
@@ -111,32 +119,25 @@
                 \item (Approximate) solution: (loopy) belief propagation.
             \end{itemize}
         \item Evaluate the attack: find the key rank
-            \begin{itemize}[<.->]
+            \begin{itemize}
                 \item Also known as Guessing Entropy (GE).
             \end{itemize}
+        \item (Bonus) Leakage assessment with uni- and bi-variate T-test
     \end{enumerate}
-    \pause
 
-    \textit{Attack introduced in} \url{https://eprint.iacr.org/2021/817}
+    \uncover<8->{\textit{Attack introduced in} \url{https://eprint.iacr.org/2021/817}}
 \end{frame}
 
 \section{Getting Started}
 \begin{frame}{Setup}
-    \begin{itemize}
-        \item Download dataset and scripts:\\
-            \url{https://github.com/simple-crypto/scalib-tutorial}
-        \item Create a python virtual environment:
-            \begin{itemize}
-                    \item Linux, Mac Os:\\
-                        \lstinline[language=sh]$cd scalib_tutorial && python3 -m venv ve && source ve/bin/activate$
-                    \item Windows:\\
-                        \lstinline[language=sh]$cd scalib_tutorial && python3 -m venv ve && .\\ve\\Scripts\\activate$
-            \end{itemize}
-        \item Install depencencies: \lstinline[language=sh]$pip install -r requirements.txt$ \\
-            {\footnotesize (dependencies: \texttt{scalib tqdm matplotlib h5py jupyter})}
-        \item Start Notebooks:
-        \lstinline[language=sh]$python -m jupyter notebook$
-    \end{itemize}
+    Follow instructions in the notebook:
+    \begin{center}
+        \url{https://github.com/simple-crypto/scalib-tutorial/blob/main/Tutorial.ipynb}
+    \end{center}
+
+    You may run the code on your laptop (recommended) or use a Google Colab notebook.
+
+    % TODO: local download link for data.
 \end{frame}
 
 
@@ -168,6 +169,10 @@
     Useful classes/functions:
     \href{https://scalib.readthedocs.io/en/stable/source/api/scalib.metrics.SNR.html}{scalib.metrics.SNR},
     \href{https://numpy.org/doc/stable/reference/generated/numpy.argsort.html}{numpy.argsort}
+
+    \bigskip
+
+    Trick: \texttt{right clik > New Console for Notebook}
 \end{frame}
 \begin{frame}{Step 1: result}
     \begin{center}
@@ -178,18 +183,19 @@
 \begin{frame}[containsverbatim]{Step 1: Solution}
 
 Compute the SNR with:
-\begin{python}
+\begin{minted}{python}
 for v in tqdm(variables, desc="SNR Variables"):
-    snr = SNR(np=1, nc=256, ns=traces.shape[1])
+    snr = SNR(nc=256)
     x = labels[v].reshape((settings.profile, 1))
     snr.fit_u(traces, x)
     snrs[v] = snr.get_snr()[0, :]
-\end{python}
+\end{minted}
+
 Recover the POIs with:
-\begin{python}
+\begin{minted}{python}
 for v, snr in snrs.items():
     poi = np.argsort(snr)[-settings.poi :].astype(np.uint32)
-\end{python}
+\end{minted}
 \end{frame}
 
 \begin{frame}{Step 2: LDA}
@@ -220,12 +226,12 @@ for v, snr in snrs.items():
 \begin{frame}[containsverbatim]{Step 2: Solution}
 
 Compute the LDA with:
-\begin{python}
+\begin{minted}{python}
 for v in tqdm(variables, desc="LDA Variables"):
-    lda = scalib.modeling.LDAClassifier(nc=256, p=settings.dim, ns=settings.poi)
+    lda = scalib.modeling.LDAClassifier(nc=256, p=settings.dim)
     lda.fit_u(traces[:, pois[v]], labels[v])
     lda.solve()
-\end{python}
+\end{minted}
 
 \end{frame}
 
@@ -259,8 +265,9 @@ for v in tqdm(variables, desc="LDA Variables"):
     \end{center}
 \end{frame}
 \begin{frame}[containsverbatim]{Step 3: solution}
+    \small
 For each of the bytes, run:
-\begin{python}
+\begin{minted}{python}
 # Init the sasca with the factor graph for a single trace
 graph = scalib.attacks.FactorGraph(sasca_graph, {"sbox": SBOX})
 # Set the labels for the plaintext byte
@@ -274,8 +281,8 @@ for v in target_variables(i):
         bp.set_evidence(vs, prs)
 # Run 3 iterations of belief propagation
 bp.bp_loopy(it=3, initialize_states=True)
-distribution = bp.get_distribution(f"k")
-\end{python}
+byte_distribution = bp.get_distribution(f"k")
+\end{minted}
 \end{frame}
 
 \begin{frame}{Step 4: Key rank estimation}
@@ -305,7 +312,7 @@ distribution = bp.get_distribution(f"k")
 \end{frame}
 
 \begin{frame}[containsverbatim]{Step 4: solution}
-\begin{python}
+\begin{minted}{python}
 def eval_rank(secret_key, key_distribution):
     """Returns the rank of the true key"""
 
@@ -320,7 +327,89 @@ def eval_rank(secret_key, key_distribution):
 
     return r
 
-\end{python}
+\end{minted}
+\end{frame}
+
+\begin{frame}{Step 5: Improved SASCA}
+    Improve the attack by using the Sbox output (see right-hand part of the
+    factor graph in Step~3).
+\end{frame}
+
+\begin{frame}{Step 5: result}
+    \begin{center}
+        \includegraphics[width=\textwidth]{figures/res_step5.png}
+    \end{center}
+\end{frame}
+
+\begin{frame}[containsverbatim]{Step 5: solution}
+    \footnotesize
+    \begin{minted}{python}
+SASCA_GRAPH_IMPROVED = """
+    [... previous graph ...]
+
+    VAR MULTI y
+    VAR MULTI y0
+    VAR MULTI y1
+    VAR MULTI yrout
+    VAR MULTI rout
+
+    PROPERTY y = sbox[x]
+    PROPERTY y = y0 ^ y1
+    PROPERTY y = yrout ^ rout
+"""
+    \end{minted}
+\end{frame}
+
+\begin{frame}{Step 6: (Bonus) Leakage assessment}
+    We run univariate (first and second-order) T-tests as well as a bivariate T-test.
+
+    As classification bit, we cannot use the typical ``fix-vs-random'' with
+    this dataset, we use a S-box input bit.
+\end{frame}
+
+\begin{frame}{Step 6: univariate result}
+    \begin{center}
+        \includegraphics[width=0.8\textwidth]{figures/res_step6a.png}
+    \end{center}
+\end{frame}
+
+\begin{frame}{Step 6: bivariate result}
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{figures/res_step6b.png}
+    \end{center}
+\end{frame}
+
+\begin{frame}[containsverbatim]{Step 6: solution}
+    \footnotesize
+    \begin{columns}
+        \begin{column}{0.25\textwidth}
+            \begin{center}
+                Univariate
+            \end{center}
+    \begin{minted}{python}
+ttest = Ttest(d=2)
+ttest.fit_u(traces, x)
+t = ttest.get_ttest()
+    \end{minted}
+        \end{column}
+        \begin{column}{0.7\textwidth}
+            \begin{center}
+                Bivariate
+            \end{center}
+    \begin{minted}{python}
+# Boolean matrix corresponding to the POI positions.
+template = np.fromfunction(lambda i, j: i <= j, (n, n))
+# Build POIS array from template
+pois_idxs = np.nonzero(template)
+pois_mat = np.vstack(pois_idxs).astype(np.uint32)
+# Compute T-test
+mttest = MTtest(d=2, pois=pois_mat)
+mttest.fit_u(traces, x)
+t = mttest.get_ttest()
+    \end{minted}
+        \end{column}
+    \end{columns}
+    % TODO bivariate solution ?
 \end{frame}
 
 \section{Conclusion}
@@ -334,11 +423,6 @@ def eval_rank(secret_key, key_distribution):
 
 \begin{frame}{Other SCALib features}
     \begin{itemize}
-        \item Ttest: for TVLA, ensures that expected masking security order is reached.
-            \begin{itemize}
-                    \item higher-order
-                    \item multivariate
-            \end{itemize}
         \item RLDA: a LDA that works with many classes (e.g. 16-bit or 32-bit states).
         \item Perceived information/Training information: evaluate quality of models.
     \end{itemize}
