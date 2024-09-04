@@ -10,4 +10,4 @@ is [here](https://github.com/simple-crypto/scalib-tutorial/blob/main/Tutorial.ip
 
 ## Running on Google colab
 
-Follow [this link](https://colab.research.google.com/drive/1WsPDDJaFf70L00xznGz_HDYXp3tMdMOI).
+Follow [this link](https://colab.research.google.com/drive/1e1WdQGExQWye0NlSXMaTsdxHu92Z9SbM).
